@@ -1,6 +1,8 @@
 # AnimationViewer
 A programm created with three.js and node.js to view animations in a browser
 
+<h1>Installation</h1>
+
 To install the programm you have to do different steps.
 
 At first you have to install node.js and monogo.db.
