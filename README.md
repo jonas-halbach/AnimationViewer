@@ -23,6 +23,7 @@ The tested mongo.db can be downloaded <a href=https://fastdl.mongodb.org/win32/m
 </li>
 <li>Use the cmd to switch to the folder, where this project is stored and execute <strong>"npm update"</strong> to install all dependencies.
 </li>
+</ol>
 
 <h2>Usage</h2>
 To run the server and the database this project includes a <strong>"start.bat"</strong>-file which shall be executed.
