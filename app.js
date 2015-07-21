@@ -122,8 +122,8 @@ app.use('/', checkAuth, routes);
 
 app.use('/users', checkAuth, users);
 app.use('/auth', function(req, res) {
-									console.log("Authing is executed!");
-									checkAuth(req, res, auth);});
+			checkAuth(req, res, auth);
+});
 									
 app.get('/start', function(req, res) {
 	res.render('auth', {title : "the animation-viewer",
