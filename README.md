@@ -24,8 +24,14 @@ Than use the cmd to switch to the folder, where this project is stored and execu
 <h2>Usage</h2>
 To run the server and the database this project includes a <strong>"start.bat"</strong>-file which shall be executed.
 After the server and the database are running the website iteself can be found under <strong>"localhost:3000/AnimationViewer"</strong>. The first page will ask for a username and a password.
-The default-username and password are:
-Username: <strong>admin</strong><br/>
-Password: <strong>passwordtest</strong><br/>
+The default-username and password are:</br>
+Username: <strong>admin</strong></br>
+Password: <strong>passwordtest</strong></br>
 
 At the moment no other user are availible and it in not possible to create a new one by using the webinferface.
+
+<h2>Creation of compatible animations</h2>
+The creation of animations is quite complicated.
+The following tutorials where used to create proper animations:</br>
+<a href="http://www.google.de/imgres?imgurl=http://www.kadrmasconcepts.com/blog/wp-content/uploads/2012/01/rendered-lamp.png&imgrefurl=http://www.kadrmasconcepts.com/blog/2012/01/24/from-blender-to-threefab-exporting-three-js-morph-animations/&h=540&w=960&tbnid=cIRhuoZNBXeTBM:&tbnh=90&tbnw=160&usg=__51hS4CXfLufxx91K6PgHRy86vp8=&docid=Or4ggzNq3p72yM">Creating a lamp-animation</a></br>
+<a href="http://blog.romanliutikov.com/post/60461559240/rigging-and-skeletal-animation-in-three-js">Creation of an animated bending bar</a>
