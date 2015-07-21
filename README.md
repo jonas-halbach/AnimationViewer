@@ -25,7 +25,7 @@ Than use the cmd to switch to the folder, where this project is stored and execu
 To run the server and the database this project includes a <strong>"start.bat"</strong>-file which shall be executed.
 After the server and the database are running the website iteself can be found under <strong>"localhost:3000/AnimationViewer"</strong>. The first page will ask for a username and a password.
 The default-username and password are:
-Username: <strong>admin</strong>
-Password: <strong>passwordtest</strong>
+Username: <strong>admin</strong><br/>
+Password: <strong>passwordtest</strong><br/>
 
 At the moment no other user are availible and it in not possible to create a new one by using the webinferface.
