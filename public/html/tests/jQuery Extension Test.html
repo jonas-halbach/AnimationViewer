@@ -1,0 +1,31 @@
+<html>
+	<head>
+		<title>jQuery Extension Tests</title>
+		<link rel="stylesheet" type="text/css" href="../External/jQueryUI/jquery-ui-1.10.4.custom/css/smoothness/jquery-ui-1.10.4.custom.css">
+		<link rel="stylesheet" href="../External/jQueryUI/selectmenu/css/jquery.ui.core.css">
+		<link rel="stylesheet" href="../External/jQueryUI/selectmenu/css/jquery.ui.theme.css">
+		<script src="../External/jQuery/jquery-1.11.0.js"></script>
+		<script src="../External/jQueryUI/jquery-ui-1.10.4.custom/js/jquery-ui-1.10.4.custom.js"></script>
+		<script src="../js/custom.js"></script>
+		<script type="text/javascript">
+			$(function() {
+				console.log("pre creation");
+				$("#testSlider").animationProgressBar({stop: function(evt){alert("blablabla");}});
+				console.log("post creation");
+				$("#normalSlider").slider({stop: (function(evt){test();} )});
+			});
+			
+			function test() {
+				console.log("blablabla");
+			}
+			
+			function test2() {
+				console.log("testtesttest");
+			}
+		</script>
+	</head>
+	<body>
+		<div id = "testSlider"></div>
+		<div id = "normalSlider"></div>
+	</body>
+</html>

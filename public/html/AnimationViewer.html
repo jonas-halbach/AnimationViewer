@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<!--
+ Author: Jonas Halbach
+ Creation Date: 24.06.2014
+
+ This html page is for the visual-representation of the animation viewer. It shows the animation, gives a user interface
+ and processes the user interaction.
+-->
+<html>
+	<head>
+		<meta charset="UTF-8" />
+		
+		<title>Animation Viewer</title>
+		<link rel="stylesheet" type="text/css" href="External/jQueryUI/jquery-ui-1.10.4.custom/css/smoothness/jquery-ui-1.10.4.custom.css">
+		<link rel="stylesheet" type="text/css" href="css/two_columns.css">
+		
+		<link rel="stylesheet" href="External/jQueryUI/selectmenu/css/jquery.ui.core.css">
+		<link rel="stylesheet" href="External/jQueryUI/selectmenu/css/jquery.ui.selectmenu.css">
+		<link rel="stylesheet" href="External/jQueryUI/selectmenu/css/jquery.ui.theme.css">
+        <!--<link rel="stylesheet" href="External/jQueryUI/jquery-ui-1.10.4.custom/development-bundle/themes/base/jquery.ui.all.css">-->
+		<link rel="stylesheet" href="http://view.jqueryui.com/master/themes/base/all.css">
+        <link rel="stylesheet" href="External/jQuery-File-Upload/uploadfile.css">
+		
+		
+		<style type="text/css">
+			body {
+				overflow: hidden;
+			}
+
+            #lightColorRedSlider .ui-slider-range { background: #ef2929; }
+            #lightColorRedSlider .ui-slider-handle { border-color: #ef2929; }
+            #lightColorGreenSlider .ui-slider-range { background: #8ae234; }
+            #lightColorGreenSlider .ui-slider-handle { border-color: #8ae234; }
+            #lightColorBlueSlider .ui-slider-range { background: #729fcf; }
+            #lightColorBlueSlider .ui-slider-handle { border-color: #729fcf; }
+		</style>
+		<script src="External/jQuery/jquery-1.11.0.js"></script>
+		<script src="External/jQueryUI/jquery-ui-1.10.4.custom/js/jquery-ui-1.10.4.custom.js"></script>
+		<script src="External/jQueryUI/selectmenu/core.js"></script>
+		<script src="External/jQueryUI/selectmenu/widget.js"></script>
+		<script src="External/jQueryUI/selectmenu/position.js"></script>
+		<script src="External/jQueryUI/selectmenu/menu.js"></script>
+		<script src="External/jQueryUI/selectmenu/selectmenu.js"></script>
+        <script src="External/jQuery-File-Upload/jquery.uploadfile.js"></script>
+		<script src="js/custom.js"></script>
+        <script src="js/constants/math.js"></script>
+		<script src="External/three/three.js"></script>
+		<script src="js/AnimationEnvironment.js"></script>
+        <script src="js/AnimationData.js"></script>
+        <script src="js/CameraController.js"></script>
+        <script src="js/gizmo/gizmos.js"></script>
+        <script src="js/moveables/moveables.js"></script>
+        <script src="js/InputController.js"></script>
+		<script type="text/javascript">
+			
+            // Container for the AnimationEnvironment
+            var environment;
+
+            // Container for the light-type. A light of this type will be created if user clicks add light
+            var selectedLightType = null;
+
+            // The selected light-object. The parameters of this light will be changed if user adjusts the controls.
+            var selectedLight = null;
+
+
+            /**
+             * This function executes the initialisation process!
+             */
+			$(function() {
+				environment = new AnimationEnvironment();
+				environment.init();
+				initSettingsFrame();
+				initPlayFrame();
+                initInputController();
+
+			});
+
+            /**
+             * This function initializes the right frame, which contains controls to change the scene.
+             */
+			function initSettingsFrame() {
+
+                $("#sidebar").height(window.innerHeight);
+
+                $("#fileuploader").uploadFile(
+                    {
+                        url: "/saveAnimation",
+                        fileName: "myFile",
+                        allowedTypes: "js",
+                        multiple: false,
+                        maxFileCount: 1,
+                        showStatusAfterSuccess:false,
+                        showStatusAfterSuccess: false,
+                        showStatusAfterError: false,
+                        showAbort:true,
+                        showDone:true,
+                        dragDrop: false,
+                        onSuccess: function(files, response, xhr) {
+                            //alert("Succeeded uploading file " + files[0].name);
+                            alert(response);
+                            updateAnimationSelectData();
+                            $("#animationSelect").val("-1");
+                            $("#animationSelect").selectmenu( "refresh" );
+                        }
+                    }
+                );
+
+                $("#viewPortTileSelect").selectmenu( {change : function(event, options)
+                    {
+                        var val = $("#" + event.target.id).val();
+
+                        environment.setTileNumber(val);
+                    }});
+			
+				$("#cameraSelect").selectmenu();
+				fillSelectBox("cameraSelect", environment.getViewPortSettings(), "select a camera...");
+
+                $("#animationSelect").selectmenu({change : function(event, options) {
+                    var val = $("#" + event.target.id).val();
+
+                    if (val) {
+                        environment.removeCurrentModelAndStopAnimation();
+                        environment.setAnimation("/getAnimationData?animationName=" +  val, animationLengthUpdate);
+
+                    }
+                }});
+                updateAnimationSelectData();
+
+                $('#addLightButton').button().click(function(event) {
+                    selectedLight = environment.addLight(selectedLightType);
+                    updateLightSelectData();
+                    showLightSections();
+
+                });
+
+                initLightSection();
+			}
+
+            /**
+             * This function initializes all controls, which are need to change light settings of the settings frame.
+             */
+            function initLightSection() {
+
+                // init the controls which can be used to change the settings of the current selected light.
+                initAllLightColorSlider();
+                initLightIntensitySlider();
+                initLightAngleSlider();
+                initLightDistanceSlider();
+
+                // Init Buttons to hide lighthelper and -gizmos.
+                initHideButtons();
+
+                initDeleteButton();
+
+                updateLightSelectData();
+
+                // Select the lighttype of the light, which will be created if user clicks add light.
+                $("#lightTypeSelect").selectmenu({change : function(event, options) {
+                    selectedLightType = $("#lightTypeSelect").val();
+                }});
+
+                $("#lightSelect").val("-1");
+                $( "#lightSelect" ).selectmenu( "refresh" );
+
+                showLightSections();
+            }
+
+            /**
+             * This function initializes all buttons which can be used to toggle the visibility of lighthelper/-gizmos.
+             */
+            function initHideButtons() {
+                $("#hideLightGizmo").button().click(function(event) {
+                    if(selectedLight) {
+                        var hide = $("#hideLightGizmo").is(":checked");
+
+                        environment.hideGizmo(selectedLight, hide);
+                    }
+                });
+
+                $("#hideAllLightGizmos").button().click(function(event) {
+                    var hide = $("#hideAllLightGizmos").is(":checked");
+
+                    environment.hideAllLightGizmos(hide);
+                });
+
+                $("#hideLightHelper").button().click(function(event) {
+                    var hide = $("#hideLightHelper").is(":checked");
+
+                    environment.hideLightHelper(selectedLight, hide);
+                });
+
+                $("#hideAllLightHelper").button().click(function(event) {
+                   var hide = $("#hideAllLightHelper").is(":checked");
+
+                    environment.hideAllLightHelper(hide);
+                });
+            }
+
+            /**
+             * Init a button to delete the current selected light.
+             */
+            function initDeleteButton() {
+                $("#deleteSelectedLight").button().click(
+                        function(event) {
+                            if (selectedLight) {
+                                environment.deleteLight(selectedLight);
+                                selectedLight = null;
+                                $("#lightSelect").val("-1");
+                                $( "#lightSelect" ).selectmenu( "refresh" );
+                                updateLightSelectData();
+                                showLightSections();
+                            }
+                        }
+                );
+            }
+
+            /**
+             * This function is used to fill the selectlight-Selectbox with all lights existing in the scene.
+             */
+            function updateLightSelectData() {
+                var rawLightData = environment.getLights();
+
+                var lightDataArray = [];
+
+                var lightData = function() {
+                    this.name = "";
+                    this.value = -1;
+
+                    this.getName = function() {
+                        return this.name;
+                    }
+
+                    this.getValue = function() {
+                        return this.value;
+                    }
+                }
+
+
+                // Fill the light-select-box with all lights availible in the scene.
+                for(var i = 0; i < rawLightData.length; i++) {
+                    var data = new lightData();
+                    data.name = rawLightData[i].type + " " + rawLightData[i].color.getHexString();
+                    data.value = i;
+
+                    lightDataArray.push(data);
+                }
+
+                fillSelectBox("lightSelect", lightDataArray, "Select a light!");
+                $("#lightSelect").selectmenu({
+                    change : function(event, option) {
+
+                        // Just show the controls, which modify the current selected light.
+                        showLightSections();
+
+                    }});
+
+            }
+
+            /**
+             * This function is used to set the visibility of the controls, which change the settings of the current
+             * selected light.
+             */
+            function showLightSections() {
+                var lights = environment.getLights();
+                var selection = $("#lightSelect").val();
+
+
+                var notaNumber = isNaN(selection);
+                var aNumber = !notaNumber && selection != null && selection != -1;
+
+                if(aNumber) {
+                    selectedLight = lights[selection];
+
+                    var hideColor = selectedLight.color == undefined;
+                    hideElement("lightColorSection", hideColor);
+
+                    var hideIntensity = selectedLight.intensity == undefined;
+                    hideElement("lightIntensitySection", hideIntensity);
+
+                    var hideAngle = selectedLight.angle == undefined;
+                    hideElement("lightAngleSection", hideAngle);
+
+                    var hideDistance = selectedLight.distance == undefined;
+                    hideElement("lightDistanceSection", hideDistance);
+                } else {
+                    selectedLight = null;
+                    hideElement("lightColorSection", true);
+                    hideElement("lightIntensitySection", true);
+                    hideElement("lightAngleSection", true);
+                    hideElement("lightDistanceSection", true);
+                }
+
+                updateSelectedLightControls();
+            }
+
+
+            /**
+             * This function initializes all lightColorSliders
+             */
+            function initAllLightColorSlider() {
+
+                initLightColorSlider("lightColorRedSlider");
+                initLightColorSlider("lightColorGreenSlider");
+                initLightColorSlider("lightColorBlueSlider");
+            }
+
+            /**
+             * This function initializes one lightColorSlider.
+             * param id: the id of the lightColorSlider to initialize
+             */
+            function initLightColorSlider(id) {
+                $("#" + id).slider({
+                    min: 0,
+                    max: 255,
+                    value : 0,
+                    step: 1,
+                    change: function(event) {changeActiveLightColor();},
+                    slide: function(event) {changeActiveLightColor();}
+                });
+            }
+
+            /**
+             * This function initializes the slider to change the intensity of the current selected light.
+             */
+            function initLightIntensitySlider() {
+                $("#lightIntensitySlider").slider({
+                        min : 0,
+                        max : 70,
+                        value : 35,
+                        step : 1,
+                        change: function(event) {changeActiveLightIntensity();},
+                        slide: function(event) {changeActiveLightIntensity();}
+
+                });
+            }
+
+            /**
+             * This function initializes the slider to change the radius of the current selected light.
+             */
+            function initLightAngleSlider() {
+                $("#lightAngleSlider").slider({
+                    min : 0,
+                    max : PI_half,
+                    value : Math.PI / 3,
+                    step : 0.01,
+                    change: function(event) {changeActiveLightAngle();},
+                    slide: function(event) {changeActiveLightAngle();}
+
+                });
+            }
+
+            /**
+             * This function initializes the slider to change the distance of the current selected light.
+             */
+            function initLightDistanceSlider() {
+                $("#lightDistanceSlider").slider({
+                        min : 0,
+                        max : 500,
+                        value : 250,
+                        step : 1,
+                        change : function(event) {changeActiveLightDistance();},
+                        slide : function(event) {changeActiveLightDistance();}
+                });
+            }
+
+
+            /**
+             * This function updates the values of all light-controls if the current selected light changes.
+             */
+            function updateSelectedLightControls() {
+
+                if (selectedLight) {
+
+                    var red = Math.round(selectedLight.color.r * 255);
+                    var green = Math.round(selectedLight.color.g * 255);
+                    var blue = Math.round(selectedLight.color.b * 255);
+
+
+                    $("#lightColorRedSlider").slider("value", red);
+                    $("#lightColorGreenSlider").slider("value", green);
+                    $("#lightColorBlueSlider").slider("value", blue);
+
+                    if (selectedLight.intensity) {
+                        $("#lightIntensitySlider").slider("value", selectedLight.intensity);
+                    }
+                    if(selectedLight.angle) {
+                        $("#lightAngleSlider").slider("value", selectedLight.angle);
+                    }
+                    if(selectedLight.distance) {
+                        $("#lightDistanceSlider").slider("value", selectedLight.distance);
+                    }
+
+                    var selectedLightHelper = environment.getLightHelper(selectedLight);
+                    if(selectedLightHelper) {
+                        //$("#hideLightHelper").attr("checked", false);
+                        $("#hideLightHelper").prop("checked", !selectedLightHelper.visible);
+                        $("#hideLightHelper").button("refresh");
+                    }
+
+                    var selectedLightGizmo = environment.getLightGizmo(selectedLight);
+                    if(selectedLightGizmo) {
+                        $("#hideLightGizmo").prop("checked", !selectedLightGizmo.visible);
+                        //$("#hideLightGizmo").attr("checked", false);
+                        $("#hideLightGizmo").button("refresh");
+                    }
+
+
+                }
+            }
+
+            /**
+             * This function changes the color of the current selected light.
+             */
+            function changeActiveLightColor() {
+
+                if(selectedLight) {
+
+                    var red = $("#lightColorRedSlider").slider("value");
+                    var green = $("#lightColorGreenSlider").slider("value");
+                    var blue = $("#lightColorBlueSlider").slider("value");
+
+                    var color = new THREE.Color("rgb(" + red + "," + green + "," + blue + ")");
+
+                    selectedLight.color = color;
+                }
+            }
+
+            /**
+             * This function changes the intensity of the current selected light.
+             */
+            function changeActiveLightIntensity() {
+                if(selectedLight) {
+                    var intensity = $("#lightIntensitySlider").slider("value");
+                    selectedLight.intensity = intensity;
+                }
+            }
+
+            /**
+             * This function changes the angle of the current selected light.
+             */
+            function changeActiveLightAngle() {
+                if(selectedLight) {
+                    var angle = $("#lightAngleSlider").slider("value");
+                    selectedLight.angle = angle;
+                }
+            }
+
+            /**
+             * This function changes the distance of the current selected light.
+             */
+            function changeActiveLightDistance() {
+                if(selectedLight) {
+                    var distance = $("#lightDistanceSlider").slider("value");
+                    selectedLight.distance = distance;
+                }
+            }
+
+            /**
+             * This function is used to set the visibility of a light.
+             */
+            function hideElement(elemId, hide) {
+                if(hide) {
+                    $("#" + elemId).hide();
+                } else {
+                    $("#" + elemId).show();
+                }
+            }
+
+            /**
+             * This function will initilize all controls of the play frame, which is used to navigate through the
+             * timeline of the animation.
+             */
+			function initPlayFrame() {
+
+                // The button to switch to the previous frame in the animation.
+				$("#previousFrameButton").button(
+					{
+						icons: 
+						{
+							primary: "ui-icon-seek-prev"
+						}
+						
+					}).click(function(event) { environment.previousAnimationFrame(); });
+
+                // Initializing to toggle the play-state of the animation.
+				$("#playButton").button(
+					{
+						icons: 
+						{
+							primary: "ui-icon-pause"
+						}
+					}).click(function(event) {
+                            environment.togglePlayPause();
+                            if (environment.isAnimationPlaying()) {
+                                $("#playButton").button("option", {icons: {primary: "ui-icon-pause"}})
+                            } else {
+                                $("#playButton").button("option", {icons: {primary: "ui-icon-play"}})
+                            }
+                        });
+
+                // The button to switch to the next frame in the animation.
+				$("#nextFrameButton").button(
+					{
+						icons: 
+						{
+							primary: "ui-icon-seek-next"
+						}
+					}).click(function(event) { environment.nextAnimationFrame(); });
+
+                // The slider to directly select a time-point in the animation.
+				$("#animationTimeSlider").animationProgressBar({
+						min: 0,
+						max: 1,
+						value : 0,
+						step: 0.01,
+						change: function(event) {setAnimationTime(event);},
+						slide: function(event) {setAnimationTime(event);},
+						start: function(event) {environment.pauseAnimation(true);},
+						stop: function(event) {
+												//if(environment.isAnimationPlaying()) {
+												environment.pauseAnimation(false);
+												//}
+											}
+						
+					});
+				
+				environment.registerNeedsTimeUpdate(updateFrameTimeSlider);
+			}
+
+
+            /**
+             * This function is used to update the max-value of the timeslider, which is equal to the animation-length.
+             */
+            function animationLengthUpdate(timescale) {
+                $("#animationTimeSlider").animationProgressBar().animationProgressBar("option", "max", timescale);
+            }
+
+            /**
+             * This function initializes the input-controller, which mainly means, that the mouse-events on the canvas
+             * will be forwarded to the input-controller.
+             */
+            function initInputController () {
+
+                $('#main').bind('contextmenu', function(e){
+                    return false;
+                });
+
+                var inputController = new InputController(environment, "viewport");
+                $("#main").bind('DOMMouseScroll mousewheel', function(evt){inputController.scroll(evt);});
+
+                //$("#main").addEventlistener('scroll', function(evt){inputController.scroll(evt);}, false);
+
+                $("#main").mousedown(function(evt) {
+                    switch (evt.which) {
+                        case 1:
+                            inputController.mouseDown(evt);
+                            break;
+                        case 2:
+                            inputController.scrollDown(evt);
+                            break;
+                        case 3:
+                            inputController.rightMouseDown(evt);
+                            break;
+                    }
+
+                });
+
+                $("html").mouseup(function(evt) {
+                    switch(evt.which) {
+                        case 1:
+                            inputController.mouseUp(evt);
+                            break;
+                        case 2:
+                            inputController.scrollUp(evt);
+                            break;
+                        case 3:
+                            inputController.rightMouseUp(evt);
+                            break;
+                    }
+                });
+
+                $("#main").mousemove(function(evt) {inputController.onMouseMove(evt);});
+
+            }
+
+            /**
+             * This function fills a selectBox with Data!
+             * @param id specifies the SelectBox
+             * @param data is an array of data-objects the selectBox shall be filled with:
+             *              each data-objects needs the functions:
+             *                  - getValue for the value of an HTML-option element
+             *                  - getName for the caption of this element
+             * @param defaultItem the title of an item which is selected as default-item and which has got the value -1
+             */
+            function fillSelectBox(id, data, defaultItem) {
+                selectbox = $("#" + id).selectmenu();
+                selectbox.find('option').remove().end();
+                if (defaultItem) {
+                    selectbox.append('<option value ="-1">' + defaultItem + '</option>');
+                }
+                if(data != null) {
+                    for(i = 0; i < data.length; i++) {
+                        console.log("old val: " + data[i].getValue());
+                        var option = selectbox.append("<option value = '" + data[i].getValue() + "' >" + data[i].getName() + "</option>").val(data[i].getValue());
+                        option.attr("value", data[i].getValue());
+                    }
+                }
+
+                selectbox.find('option').each(function(option)
+                {
+                    console.log("Option value: " + option);
+                });
+
+                if(selectbox) {
+                    selectbox.selectmenu("refresh");
+                }
+            }
+
+            /**
+             * This funtion updates the selectedbox and fills it with all existing animations of the user.
+             */
+            function updateAnimationSelectData() {
+                $.get("/getAnimationList",
+                        function(data) {
+                            var parsedData = JSON.parse(data);
+                            var dataArray = [];
+                            for (var i = 0; i < parsedData.length; i++) {
+                                dataArray.push(new AnimationData(parsedData[i].animName, parsedData[i].animName));
+                                console.log("Data Name: " + dataArray[i].getName() + "  Data Value: " + dataArray[i].getValue());
+                            }
+
+                            fillSelectBox("animationSelect", dataArray, "Select an animation!");
+
+                            $("#animationSelect").val("-1");
+                            $("#animationSelect").selectmenu("refresh");
+                        });
+            }
+
+			/**
+             * This callback-function is used to set the animation time if the animation is playing.
+             */
+			function updateFrameTimeSlider(currentTime) {
+				try {
+					if(!$( "#animationTimeSlider").animationProgressBar("option", "mouseIsDown")) {
+						$( "#animationTimeSlider").animationProgressBar({value:currentTime});
+					}
+				} catch(err) {console.log(err);}
+			}
+
+            /**
+             * Set the animation-time if it is changed by user.
+             */
+			function setAnimationTime(evt) {
+				if(evt.originalEvent) {
+				     environment.setAnimationFrameTime($( "#animationTimeSlider").animationProgressBar("value"));
+				}
+			}
+			
+		</script>
+	</head>
+	<body>
+		<div id="wrap">
+			<div id="header"></div>
+			<div id="nav"></div>
+			<div id="main">
+				<div class="viewport"></div>
+			</div>
+
+			<div id="sidebar">
+
+                <div id="fileuploader">Upload...</div>
+                <select id="animationSelect" style = "width: 200px"></select>
+
+                <select id="viewPortTileSelect" style = "width: 200px">
+                    <option value="1">1</option>
+                    <option value="2">2</option>
+                    <option value="4">4</option>
+                </select>
+
+                <select id ="lightTypeSelect" style="width: 200px">
+                    <option value = "None">Select a lighttype!</option>
+                    <option value = "Ambient">Ambientlight</option>
+                    <option value = "Point">Pointlight</option>
+                    <option value = "Spot">Spotlight</option>
+                    <option value = "Directional">Directionallight</option>
+                </select>
+                <button id="addLightButton" style="width: 200px">Add Light</button>
+
+                <select id="lightSelect" style="width: 200px"></select>
+
+
+                <div id="lightSection">
+
+                    <div id="lightColorSection">
+
+                        <p>Color:</p>
+
+                        <div id="lightColorRedSlider" class></div>
+                        <div id="lightColorGreenSlider"></div>
+                        <div id="lightColorBlueSlider"></div>
+                    </div>
+                    <div id="lightIntensitySection">
+                        <p>Intensity:</p>
+                        <div id="lightIntensitySlider"></div>
+                    </div>
+                    <div id="lightDistanceSection">
+                        <p>Distance:</p>
+                        <div id="lightDistanceSlider"></div>
+                    </div>
+                    <div id="lightAngleSection">
+                        <p>Angle:</p>
+                        <div id="lightAngleSlider"></div>
+                    </div>
+                    <button id="deleteSelectedLight" style="width:200px">Delete light</button>
+                    <input type="checkbox" id="hideLightGizmo"><label for="hideLightGizmo" style="width: 200px">Hide light-gizmo</label>
+                    <input type="checkbox" id="hideAllLightGizmos"><label for="hideAllLightGizmos" style="width: 200px">Hide all gizmos</label>
+                    <input type="checkbox" id="hideLightHelper"><label for="hideLightHelper" style="width: 200px">Hide lighthelper</label>
+                    <input type="checkbox" id="hideAllLightHelper"><label for="hideAllLightHelper" style="width: 200px">Hide all lighthelper</label>
+                </div>
+			</div>
+			<div id="footer" style="width: 79%">
+				<div style="float:left">
+					<button id = "previousFrameButton"></button>
+					<button id = "playButton"> </button>
+					<button id = "nextFrameButton"></button>
+				</div>
+				<div id = "animationTimeSlider" style="width:70%;float:right;"></div>
+				
+			</div>
+		</div>
+	</body>
+</html>

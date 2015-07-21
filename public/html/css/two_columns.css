@@ -1,0 +1,23 @@
+/* Two-column layout by http://www.456bereastreet.com/lab/developing_with_web_standards/csslayout/2-col/ */ 
+
+#main 
+{
+    float:left;
+    width:79%;
+	margin-right: 1%;
+}
+
+#sidebar 
+{
+    float:right;
+    width:19%;
+	margin-left: 1%;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+#footer 
+{
+
+	float:left;
+}

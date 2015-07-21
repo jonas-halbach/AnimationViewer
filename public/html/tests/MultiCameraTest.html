@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+<title>Viewports - Dual (Three.js)</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+<link rel=stylesheet href="css/base.css"/>
+</head>
+<body>
+<script src="../External/three/three.js"></script>
+<!-- ------------------------------------------------------------ -->
+<div id="ThreeJS" style="position: absolute; left:0px; top:0px"></div>
+<script>
+/*
+Three.js "tutorials by example"
+Author: Lee Stemkoski
+Date: July 2013 (three.js v59dev)
+*/
+// MAIN
+// standard global variables
+var container, scene, renderer, controls;
+// custom global variables
+var MovingCube;
+var chaseCamera, topCamera;
+init();
+animate();
+// FUNCTIONS
+function init()
+{
+// SCENE
+scene = new THREE.Scene();
+// CAMERA
+var SCREEN_WIDTH = window.innerWidth, SCREEN_HEIGHT = window.innerHeight;
+var VIEW_ANGLE = 45, ASPECT = SCREEN_WIDTH / SCREEN_HEIGHT, NEAR = 0.1, FAR = 20000;
+// camera 1
+topCamera = new THREE.PerspectiveCamera( VIEW_ANGLE, ASPECT, NEAR, FAR);
+scene.add(topCamera);
+topCamera.position.set(0,200+50,550+200);
+topCamera.lookAt(scene.position);
+// camera 2
+chaseCamera = new THREE.PerspectiveCamera( VIEW_ANGLE, ASPECT, NEAR, FAR);
+scene.add(chaseCamera);
+// RENDERER
+renderer = new THREE.WebGLRenderer( {antialias:true} );
+renderer.setSize(SCREEN_WIDTH, SCREEN_HEIGHT);
+container = document.getElementById( 'ThreeJS' );
+container.appendChild( renderer.domElement );
+// LIGHT
+var light = new THREE.PointLight(0xffffff);
+light.position.set(0,250,0);
+scene.add(light);
+// FLOOR
+
+var material = new THREE.MeshPhongMaterial( { emissive: 0xbbbbbb } );
+
+var floorGeometry = new THREE.PlaneGeometry(1000, 1000, 10, 10);
+var floor = new THREE.Mesh(floorGeometry, material);
+floor.position.y = -0.5;
+floor.rotation.x = Math.PI / 2;
+scene.add(floor);
+// SKYBOX/FOG
+var skyBoxGeometry = new THREE.CubeGeometry( 10000, 10000, 10000 );
+var skyBoxMaterial = new THREE.MeshBasicMaterial( { color: 0x9999ff, side: THREE.BackSide } );
+var skyBox = new THREE.Mesh( skyBoxGeometry, material );
+scene.add(skyBox);
+////////////
+// CUSTOM //
+////////////
+// create an array with six textures for a cool cube
+
+var MovingCubeGeom = new THREE.CubeGeometry( 50, 50, 50, 1, 1, 1, material );
+MovingCube = new THREE.Mesh( MovingCubeGeom, material );
+MovingCube.position.set(0, 25.1, 0);
+scene.add( MovingCube );
+// a little bit of scenery...
+var ambientlight = new THREE.AmbientLight(0x111111);
+scene.add( ambientlight );
+var wireMaterial = new THREE.MeshBasicMaterial( { color: 0x000000, wireframe: true, transparent: true } );
+// torus knot
+var colorMaterial = new THREE.MeshPhongMaterial( { color: 0xff3333 } );
+var shape = THREE.SceneUtils.createMultiMaterialObject(
+new THREE.TorusKnotGeometry( 30, 6, 160, 10, 2, 5 ), [ colorMaterial, wireMaterial ] );
+shape.position.set(-200, 50, -200);
+scene.add( shape );
+// torus knot
+var colorMaterial = new THREE.MeshPhongMaterial( { color: 0x33ff33 } );
+var shape = THREE.SceneUtils.createMultiMaterialObject(
+new THREE.TorusKnotGeometry( 30, 6, 160, 10, 3, 2 ), [ colorMaterial, wireMaterial ] );
+shape.position.set(200, 50, -200);
+scene.add( shape );
+// torus knot
+var colorMaterial = new THREE.MeshPhongMaterial( { color: 0xffff33 } );
+var shape = THREE.SceneUtils.createMultiMaterialObject(
+new THREE.TorusKnotGeometry( 30, 6, 160, 10, 4, 3 ), [ colorMaterial, wireMaterial ] );
+shape.position.set(200, 50, 200);
+scene.add( shape );
+// torus knot
+var colorMaterial = new THREE.MeshPhongMaterial( { color: 0x3333ff } );
+var shape = THREE.SceneUtils.createMultiMaterialObject(
+new THREE.TorusKnotGeometry( 30, 6, 160, 10, 3, 4 ), [ colorMaterial, wireMaterial ] );
+shape.position.set(-200, 50, 200);
+scene.add( shape );
+renderer.setSize( window.innerWidth, window.innerHeight );
+renderer.setClearColorHex( 0x000000, 1 );
+renderer.autoClear = false;
+}
+function animate()
+{
+requestAnimationFrame( animate );
+render();
+update();
+}
+function update()
+{
+var relativeCameraOffset = new THREE.Vector3(0,50,200+100);
+var cameraOffset = relativeCameraOffset.applyMatrix4( MovingCube.matrixWorld );
+chaseCamera.position.x = cameraOffset.x;
+chaseCamera.position.y = cameraOffset.y;
+chaseCamera.position.z = cameraOffset.z;
+chaseCamera.lookAt( MovingCube.position );
+}
+function render()
+{
+var SCREEN_WIDTH = window.innerWidth, SCREEN_HEIGHT = window.innerHeight;
+chaseCamera.aspect = 0.5 * SCREEN_WIDTH / SCREEN_HEIGHT;
+topCamera.aspect = 0.5 * SCREEN_WIDTH / SCREEN_HEIGHT;
+chaseCamera.updateProjectionMatrix();
+topCamera.updateProjectionMatrix();
+// setViewport parameters:
+// lower_left_x, lower_left_y, viewport_width, viewport_height
+renderer.setViewport( 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT );
+renderer.clear();
+// left side
+renderer.setViewport( 1, 1, 0.5 * SCREEN_WIDTH - 2, SCREEN_HEIGHT - 2 );
+renderer.render( scene, chaseCamera );
+// right side
+renderer.setViewport( 0.5 * SCREEN_WIDTH + 1, 1, 0.5 * SCREEN_WIDTH - 2, SCREEN_HEIGHT - 2 );
+renderer.render( scene, chaseCamera );
+}
+</script>
+</body>
+</html>
